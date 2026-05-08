@@ -597,7 +597,7 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
                     FutureBuilder<DocumentSnapshot>(
                       future: FirebaseFirestore.instance
                           .collection('orders')
-                          .doc(order.id)
+                          .doc(order.id.toString())
                           .get(),
                       builder: (context, snapshot) {
                         if (snapshot.hasData && snapshot.data!.exists) {

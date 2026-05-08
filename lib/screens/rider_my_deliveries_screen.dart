@@ -433,10 +433,9 @@ class RiderMyDeliveriesScreen extends StatelessWidget {
 
       // Upload photo to Cloudinary
       final cloudinaryService = CloudinaryService();
-      final photoUrl = await cloudinaryService.uploadImage(
+      final photoUrl = await CloudinaryService.uploadProductImage(
         File(photo.path),
-        folder: 'ebaby/delivery_proofs',
-        publicId: 'delivery_$orderId',
+        'delivery_$orderId',
       );
 
       // Get order data
