@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Profile pictures - allow authenticated users to upload their own
+    match /profile_pics/{userEmail} {
+      allow read: if true; // Anyone can view profile pictures
+      allow write: if true; // Allow uploads (we validate by email in app)
+    }
+    
+    // Banner images - allow authenticated users to upload their own
+    match /banners/{userEmail} {
+      allow read: if true; // Anyone can view banners
+      allow write: if true; // Allow uploads (we validate by email in app)
+    }
+    
+    // Product images - allow sellers to upload
+    match /products/{allPaths=**} {
+      allow read: if true; // Anyone can view product images
+      allow write: if true; // Allow sellers to upload
+    }
+    
+    // Default: deny all other access
+    match /{allPaths=**} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}

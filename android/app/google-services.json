@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "736452239702",
+    "project_id": "e-baby-81746",
+    "storage_bucket": "e-baby-81746.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:736452239702:android:213c0e8b9980858bd7b6f7",
+        "android_client_info": {
+          "package_name": "com.ebaby"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvJdPfojtdRbB1KdY9RwOt1Zxy1j7xLbM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

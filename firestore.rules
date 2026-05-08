@@ -1,0 +1,81 @@
+rules_version = '2';
+
+// DEPLOYMENT INSTRUCTIONS:
+// 1. Make sure you're in E-Baby-Mobile directory
+// 2. Run: firebase deploy --only firestore:rules
+// 3. Wait for "Deploy complete!" message
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection - Allow all operations for mobile app
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+    
+    // Products collection - Allow all operations
+    match /products/{productId} {
+      allow read, write: if true;
+    }
+    
+    // Product variants - Allow all operations
+    match /product_variants/{variantId} {
+      allow read, write: if true;
+    }
+    
+    // Cart collection - Allow all operations
+    match /cart/{cartId} {
+      allow read, write: if true;
+    }
+    
+    // Orders collection - Allow all operations
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+    
+    // Wishlist collection - Allow all operations
+    match /wishlist/{wishlistId} {
+      allow read, write: if true;
+    }
+    
+    // Chat messages - Allow all operations
+    match /chat_messages/{messageId} {
+      allow read, write: if true;
+    }
+    
+    // Seller requests - Allow all operations
+    match /seller_requests/{requestId} {
+      allow read, write: if true;
+    }
+    
+    // Rider requests - Allow all operations
+    match /rider_requests/{requestId} {
+      allow read, write: if true;
+    }
+    
+    // Buyer requests - Allow all operations
+    match /buyer_requests/{requestId} {
+      allow read, write: if true;
+    }
+    
+    // Rider earnings - Allow all operations
+    match /rider_earnings/{earningId} {
+      allow read, write: if true;
+    }
+    
+    // Seller commissions - Allow all operations
+    match /seller_commissions/{commissionId} {
+      allow read, write: if true;
+    }
+    
+    // Admin activity logs - Allow all operations
+    match /admin_activity_logs/{logId} {
+      allow read, write: if true;
+    }
+    
+    // Seller reports - Allow all operations
+    match /seller_reports/{reportId} {
+      allow read, write: if true;
+    }
+  }
+}
