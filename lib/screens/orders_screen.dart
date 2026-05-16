@@ -597,34 +597,94 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
                     FutureBuilder<DocumentSnapshot>(
                       future: FirebaseFirestore.instance
                           .collection('orders')
-                          .doc(order.id.toString())
+                          .doc(order.docId ?? order.id.toString())
                           .get(),
                       builder: (context, snapshot) {
                         if (snapshot.hasData && snapshot.data!.exists) {
                           final data = snapshot.data!.data() as Map<String, dynamic>?;
-                          final deliveryPhoto = data?['delivery_photo'] as String?;
+                          String? deliveryPhoto = data?['delivery_photo'] as String?;
                           
+                          // Fix Cloudinary URL format
                           if (deliveryPhoto != null && deliveryPhoto.isNotEmpty) {
+                            if (deliveryPhoto.startsWith('//')) {
+                              deliveryPhoto = 'https:$deliveryPhoto';
+                            } else if (!deliveryPhoto.startsWith('http')) {
+                              deliveryPhoto = 'https://$deliveryPhoto';
+                            }
+                            
                             return Column(
                               children: [
                                 const SizedBox(height: 16),
                                 _buildDetailSection(
                                   'Delivery Proof',
                                   [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        deliveryPhoto,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
-                                          height: 200,
-                                          color: Colors.grey[200],
-                                          child: const Center(
-                                            child: Icon(Icons.image_not_supported),
+                                    GestureDetector(
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => Dialog(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                AppBar(
+                                                  title: const Text('Delivery Photo'),
+                                                  automaticallyImplyLeading: false,
+                                                  actions: [
+                                                    IconButton(
+                                                      icon: const Icon(Icons.close),
+                                                      onPressed: () => Navigator.pop(context),
+                                                    ),
+                                                  ],
+                                                ),
+                                                InteractiveViewer(
+                                                  child: Image.network(
+                                                    deliveryPhoto!,
+                                                    fit: BoxFit.contain,
+                                                    errorBuilder: (_, __, ___) => Container(
+                                                      height: 200,
+                                                      color: Colors.grey[200],
+                                                      child: const Center(
+                                                        child: Icon(Icons.image_not_supported),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          deliveryPhoto!,
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Container(
+                                            height: 200,
+                                            color: Colors.grey[200],
+                                            child: const Center(
+                                              child: Icon(Icons.image_not_supported),
+                                            ),
                                           ),
                                         ),
                                       ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.info_outline, size: 14, color: Colors.grey[600]),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            'Photo taken by rider upon delivery. Tap to view full size.',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),

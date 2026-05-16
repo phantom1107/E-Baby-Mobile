@@ -14,6 +14,7 @@ import '../screens/add_product_screen.dart';
 import '../screens/seller_products_screen.dart';
 import '../screens/seller_order_list_screen.dart';
 import '../screens/orders_screen.dart';
+import '../screens/rider_delivery_photos_screen.dart';
 import '../screens/placeholder_screens.dart'
     hide
         CartScreen,
@@ -58,6 +59,7 @@ class AppRoutes {
   static const String adminUserManagement = '/admin_user_management';
   static const String registerRequest = '/register_request';
   static const String riderDashboard = '/rider_dashboard';
+  static const String riderDeliveryPhotos = '/rider_delivery_photos';
   static const String bannedAccount = '/banned_account';
   static const String viewSeller = '/view_seller';
   static const String viewRider = '/view_rider';
@@ -85,6 +87,7 @@ class AppRoutes {
         adminUserManagement: (context) => const AdminUserManagementScreen(),
         registerRequest: (context) => const RegisterRequestScreen(),
         riderDashboard: (context) => const RiderDashboardScreen(),
+        riderDeliveryPhotos: (context) => const RiderDeliveryPhotosScreen(),
         bannedAccount: (context) => const BannedAccountScreen(),
         viewSeller: (context) => const ViewSellerScreen(),
         viewRider: (context) => const ViewRiderScreen(),

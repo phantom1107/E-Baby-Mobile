@@ -564,7 +564,22 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       if (!mounted) return;
 
       if (result['success']) {
-        Navigator.pushReplacementNamed(context, '/home');
+        // Route based on user type
+        final userType = authService.currentUser?.userType ?? 'Buyer';
+        
+        switch (userType) {
+          case 'Admin':
+            Navigator.pushReplacementNamed(context, '/admin_dashboard');
+            break;
+          case 'Seller':
+            Navigator.pushReplacementNamed(context, '/seller_dashboard');
+            break;
+          case 'Rider':
+            Navigator.pushReplacementNamed(context, '/rider_dashboard');
+            break;
+          default: // Buyer
+            Navigator.pushReplacementNamed(context, '/home');
+        }
       } else {
         _showSnackBar(result['error'] ?? 'Login failed', isError: true);
       }

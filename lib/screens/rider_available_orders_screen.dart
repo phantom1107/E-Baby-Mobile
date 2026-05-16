@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../services/auth_service.dart';
 
 class RiderAvailableOrdersScreen extends StatelessWidget {
@@ -104,17 +107,24 @@ class RiderAvailableOrdersScreen extends StatelessWidget {
     final productName = data['name'] ?? 'Unknown Product';
     final quantity = data['quantity'] ?? 1;
     final totalPrice = (data['total_price'] ?? 0).toDouble();
-    final imageUrl = data['image'] ?? '';
+    String imageUrl = data['image'] ?? '';
+    
+    // Fix Cloudinary URL format
+    if (imageUrl.isNotEmpty && imageUrl.startsWith('//')) {
+      imageUrl = 'https:$imageUrl';
+    } else if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+      imageUrl = 'https://$imageUrl';
+    }
+    
     final customerEmail = data['email'] ?? '';
     final deliveryAddress = data['delivery_address'] ?? 'No address';
     final orderDate = (data['order_date'] as Timestamp?)?.toDate() ?? DateTime.now();
     final formattedDate = DateFormat('MMM dd, yyyy hh:mm a').format(orderDate);
 
-    // Calculate delivery earnings: ₱38 shipping + ₱10 per ₱2000 of subtotal
-    final subtotal = (data['subtotal'] ?? 0).toDouble();
-    final shippingFee = 38.0; // Static shipping fee
-    final commission = (subtotal / 2000) * 10; // ₱10 per ₱2000
-    final totalEarnings = shippingFee + commission;
+    // Show estimated earnings (will be calculated accurately when accepting)
+    final shippingFee = 38.0;
+    final estimatedCommission = 10.0; // Placeholder, actual will be calculated on accept
+    final estimatedEarnings = shippingFee + estimatedCommission;
 
     final color = data['color'] ?? '';
     final size = data['size'] ?? '';
@@ -265,45 +275,73 @@ class RiderAvailableOrdersScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Your Earnings',
+                      'Estimated Earnings',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
                       ),
                     ),
                     Text(
-                      '₱${totalEarnings.toStringAsFixed(2)}',
+                      '₱${estimatedEarnings.toStringAsFixed(2)}+',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF10B981),
                       ),
                     ),
-                    if (commission > 0 || shippingFee > 0)
-                      Text(
-                        '₱${shippingFee.toStringAsFixed(2)} + ₱${commission.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey[500],
-                        ),
+                    Text(
+                      'Based on distance',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
                       ),
+                    ),
                   ],
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _acceptOrder(context, orderId, riderEmail),
-                  icon: const Icon(Icons.check, size: 18),
-                  label: const Text('Accept'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7C3AED),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
+                Column(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _acceptOrder(context, orderId, riderEmail),
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('Accept'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7C3AED),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () => _viewOrderDetails(context, orderId, data),
+                          icon: const Icon(Icons.info_outline, size: 20),
+                          tooltip: 'View Details',
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.grey[200],
+                            padding: const EdgeInsets.all(8),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => _openMaps(deliveryAddress),
+                          icon: const Icon(Icons.map, size: 20),
+                          tooltip: 'Open Maps',
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.blue[100],
+                            padding: const EdgeInsets.all(8),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -326,58 +364,376 @@ class RiderAvailableOrdersScreen extends StatelessWidget {
     String orderId,
     String riderEmail,
   ) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Accept Delivery'),
-        content: const Text('Are you sure you want to accept this delivery?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7C3AED),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Accept'),
-          ),
-        ],
-      ),
-    );
+    // Get rider's current location
+    try {
+      // Request location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Location permission is required to accept orders'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      }
 
-    if (confirm == true) {
-      try {
-        // Update order status to Shipping (matching website logic) and assign rider
-        await FirebaseFirestore.instance
-            .collection('orders')
-            .doc(orderId)
-            .update({
-          'status': 'Shipping',
-          'rider_email': riderEmail,
-        });
-
+      if (permission == LocationPermission.deniedForever) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Order accepted! Start delivery now.'),
-              backgroundColor: Color(0xFF10B981),
-            ),
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error accepting order: $e'),
+              content: Text('Please enable location permission in settings'),
               backgroundColor: Colors.red,
             ),
           );
         }
+        return;
       }
+
+      // Show loading dialog
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Getting your location...'),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // Get current position with timeout
+      final Position riderPosition = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      // Get order data to extract delivery address
+      final orderDoc = await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(orderId)
+          .get();
+
+      if (!orderDoc.exists) {
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Order not found'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final orderData = orderDoc.data() as Map<String, dynamic>;
+      final deliveryAddress = orderData['delivery_address'] as String?;
+
+      if (deliveryAddress == null || deliveryAddress.isEmpty) {
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Delivery address not found'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Geocode delivery address to get coordinates with timeout
+      List<Location> locations = [];
+      try {
+        locations = await locationFromAddress(deliveryAddress)
+            .timeout(const Duration(seconds: 10));
+      } catch (e) {
+        print('Geocoding error: $e');
+      }
+      
+      double distanceInKm = 0;
+      double distanceCommission = 0;
+      double shippingFee = 38.0;
+      double totalEarnings = shippingFee;
+
+      if (locations.isNotEmpty) {
+        final deliveryLocation = locations.first;
+
+        // Calculate distance in meters
+        final distanceInMeters = Geolocator.distanceBetween(
+          riderPosition.latitude,
+          riderPosition.longitude,
+          deliveryLocation.latitude,
+          deliveryLocation.longitude,
+        );
+
+        // Convert to kilometers
+        distanceInKm = distanceInMeters / 1000;
+
+        // Calculate commission: ₱10 per 3km
+        distanceCommission = (distanceInKm / 3) * 10;
+        totalEarnings = shippingFee + distanceCommission;
+      }
+
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading
+
+        // Show confirmation with distance and earnings
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Accept Delivery'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Delivery Details:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 20, color: Color(0xFF7C3AED)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          deliveryAddress,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        if (distanceInKm > 0) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Distance:', style: TextStyle(fontWeight: FontWeight.w600)),
+                              Text(
+                                '${distanceInKm.toStringAsFixed(2)} km',
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 16),
+                        ],
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Base Fee:'),
+                            Text('₱${shippingFee.toStringAsFixed(2)}'),
+                          ],
+                        ),
+                        if (distanceCommission > 0) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Distance Fee:'),
+                              Text('₱${distanceCommission.toStringAsFixed(2)}'),
+                            ],
+                          ),
+                        ],
+                        const Divider(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Your Earnings:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text(
+                              '₱${totalEarnings.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF7C3AED),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Accept'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm == true) {
+          // Show loading again for update
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const Center(child: CircularProgressIndicator()),
+          );
+
+          try {
+            // Update order with rider info and distance-based commission
+            await FirebaseFirestore.instance
+                .collection('orders')
+                .doc(orderId)
+                .update({
+              'status': 'Shipping',
+              'rider_email': riderEmail,
+              'rider_location_lat': riderPosition.latitude,
+              'rider_location_lng': riderPosition.longitude,
+              'delivery_distance_km': distanceInKm,
+              'distance_commission': distanceCommission,
+              'rider_total_earnings': totalEarnings,
+              'accepted_at': FieldValue.serverTimestamp(),
+            });
+
+            if (context.mounted) {
+              Navigator.pop(context); // Close loading
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    distanceInKm > 0 
+                      ? 'Order accepted! Distance: ${distanceInKm.toStringAsFixed(2)} km'
+                      : 'Order accepted!'
+                  ),
+                  backgroundColor: const Color(0xFF10B981),
+                ),
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              Navigator.pop(context); // Close loading
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error accepting order: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        // Try to close any open dialogs
+        Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _viewOrderDetails(BuildContext context, String orderId, Map<String, dynamic> data) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Order Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailRow('Order ID', orderId),
+              _buildDetailRow('Product', data['name'] ?? 'N/A'),
+              _buildDetailRow('Quantity', '${data['quantity'] ?? 0}'),
+              _buildDetailRow('Color', data['color'] ?? 'N/A'),
+              _buildDetailRow('Size', data['size'] ?? 'N/A'),
+              _buildDetailRow('Subtotal', '₱${(data['subtotal'] ?? 0).toStringAsFixed(2)}'),
+              _buildDetailRow('Total Price', '₱${(data['total_price'] ?? 0).toStringAsFixed(2)}'),
+              _buildDetailRow('Customer', data['email'] ?? 'N/A'),
+              _buildDetailRow('Phone', data['phone'] ?? 'N/A'),
+              _buildDetailRow('Address', data['delivery_address'] ?? 'N/A'),
+              _buildDetailRow('Payment', data['payment_method'] ?? 'N/A'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openMaps(String address) async {
+    // Clean up address - remove newlines and extra whitespace
+    final cleanAddress = address.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final encodedAddress = Uri.encodeComponent(cleanAddress);
+    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$encodedAddress');
+    
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback - try to open with any available app
+        await launchUrl(url);
+      }
+    } catch (e) {
+      print('Error opening maps: $e');
     }
   }
 }

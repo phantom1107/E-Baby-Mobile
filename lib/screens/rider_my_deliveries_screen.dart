@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/cloudinary_service.dart';
 
@@ -101,17 +102,27 @@ class RiderMyDeliveriesScreen extends StatelessWidget {
     final productName = data['name'] ?? 'Unknown Product';
     final quantity = data['quantity'] ?? 1;
     final totalPrice = (data['total_price'] ?? 0).toDouble();
-    final imageUrl = data['image'] ?? '';
+    String imageUrl = data['image'] ?? '';
+    
+    // Fix Cloudinary URL format
+    if (imageUrl.isNotEmpty && imageUrl.startsWith('//')) {
+      imageUrl = 'https:$imageUrl';
+    } else if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+      imageUrl = 'https://$imageUrl';
+    }
+    
     final customerEmail = data['email'] ?? '';
     final deliveryAddress = data['delivery_address'] ?? 'No address';
     final orderDate = (data['order_date'] as Timestamp?)?.toDate() ?? DateTime.now();
     final formattedDate = DateFormat('MMM dd, yyyy hh:mm a').format(orderDate);
 
-    // Calculate delivery earnings: ₱38 shipping + ₱10 per ₱2000 of subtotal
-    final subtotal = (data['subtotal'] ?? 0).toDouble();
-    final shippingFee = 38.0; // Static shipping fee
-    final commission = (subtotal / 2000) * 10; // ₱10 per ₱2000
-    final totalEarnings = shippingFee + commission;
+    // Get distance-based commission from order data
+    final distanceKm = (data['delivery_distance_km'] ?? 0).toDouble();
+    final distanceCommission = (data['distance_commission'] ?? 0).toDouble();
+    final shippingFee = 38.0; // Base shipping fee
+    
+    // Calculate total earnings (use stored value if available, otherwise calculate)
+    final totalEarnings = (data['rider_total_earnings'] ?? (shippingFee + distanceCommission)).toDouble();
     
     final color = data['color'] ?? '';
     final size = data['size'] ?? '';
@@ -305,9 +316,17 @@ class RiderMyDeliveriesScreen extends StatelessWidget {
                         color: Color(0xFF10B981),
                       ),
                     ),
-                    if (commission > 0 || shippingFee > 0)
+                    if (distanceKm > 0)
                       Text(
-                        '₱${shippingFee.toStringAsFixed(2)} + ₱${commission.toStringAsFixed(2)}',
+                        '${distanceKm.toStringAsFixed(2)} km • ₱${shippingFee.toStringAsFixed(0)} + ₱${distanceCommission.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey[500],
+                        ),
+                      )
+                    else
+                      Text(
+                        'Base fee: ₱${shippingFee.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontSize: 10,
                           color: Colors.grey[500],
@@ -315,21 +334,50 @@ class RiderMyDeliveriesScreen extends StatelessWidget {
                       ),
                   ],
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _markAsDelivered(context, orderId, totalPrice),
-                  icon: const Icon(Icons.check_circle, size: 18),
-                  label: const Text('Mark Delivered'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                Column(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _markAsDelivered(context, orderId, totalPrice),
+                      icon: const Icon(Icons.check_circle, size: 18),
+                      label: const Text('Mark Delivered'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () => _viewOrderDetails(context, orderId, data),
+                          icon: const Icon(Icons.info_outline, size: 20),
+                          tooltip: 'View Details',
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.grey[200],
+                            padding: const EdgeInsets.all(8),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => _openMaps(deliveryAddress),
+                          icon: const Icon(Icons.map, size: 20),
+                          tooltip: 'Open Maps',
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.blue[100],
+                            padding: const EdgeInsets.all(8),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -379,21 +427,27 @@ class RiderMyDeliveriesScreen extends StatelessWidget {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Mark as Delivered'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.file(
-                File(photo.path),
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                constraints: const BoxConstraints(
+                  maxHeight: 200,
+                  maxWidth: 300,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    File(photo.path),
+                    fit: BoxFit.cover,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Confirm that this order has been delivered to the customer?'),
-          ],
+              const SizedBox(height: 16),
+              const Text('Confirm that this order has been delivered to the customer?'),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -447,12 +501,12 @@ class RiderMyDeliveriesScreen extends StatelessWidget {
       if (!orderDoc.exists) return;
       
       final orderData = orderDoc.data() as Map<String, dynamic>;
-      final subtotal = (orderData['subtotal'] ?? 0).toDouble();
       
-      // Calculate earnings
+      // Get distance-based commission from order data
+      final distanceKm = (orderData['delivery_distance_km'] ?? 0).toDouble();
+      final distanceCommission = (orderData['distance_commission'] ?? 0).toDouble();
       final shippingFee = 38.0;
-      final commission = (subtotal / 2000) * 10;
-      final totalEarnings = shippingFee + commission;
+      final totalEarnings = (orderData['rider_total_earnings'] ?? (shippingFee + distanceCommission)).toDouble();
 
       // Update order with delivery photo
       await FirebaseFirestore.instance
@@ -464,11 +518,12 @@ class RiderMyDeliveriesScreen extends StatelessWidget {
         'delivery_photo_timestamp': FieldValue.serverTimestamp(),
       });
 
-      // Create earnings record
+      // Create earnings record with distance-based commission
       await FirebaseFirestore.instance.collection('rider_earnings').add({
         'rider_email': riderEmail,
         'order_id': orderId,
-        'commission': commission,
+        'distance_km': distanceKm,
+        'distance_commission': distanceCommission,
         'shipping_fee': shippingFee,
         'total_earned': totalEarnings,
         'status': 'Completed',
@@ -495,6 +550,86 @@ class RiderMyDeliveriesScreen extends StatelessWidget {
           ),
         );
       }
+    }
+  }
+
+  void _viewOrderDetails(BuildContext context, String orderId, Map<String, dynamic> data) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Order Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailRow('Order ID', orderId),
+              _buildDetailRow('Product', data['name'] ?? 'N/A'),
+              _buildDetailRow('Quantity', '${data['quantity'] ?? 0}'),
+              _buildDetailRow('Color', data['color'] ?? 'N/A'),
+              _buildDetailRow('Size', data['size'] ?? 'N/A'),
+              _buildDetailRow('Subtotal', '₱${(data['subtotal'] ?? 0).toStringAsFixed(2)}'),
+              _buildDetailRow('Total Price', '₱${(data['total_price'] ?? 0).toStringAsFixed(2)}'),
+              _buildDetailRow('Customer', data['email'] ?? 'N/A'),
+              _buildDetailRow('Phone', data['phone'] ?? 'N/A'),
+              _buildDetailRow('Address', data['delivery_address'] ?? 'N/A'),
+              _buildDetailRow('Payment', data['payment_method'] ?? 'N/A'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openMaps(String address) async {
+    // Clean up address - remove newlines and extra whitespace
+    final cleanAddress = address.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final encodedAddress = Uri.encodeComponent(cleanAddress);
+    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$encodedAddress');
+    
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback - try to open with any available app
+        await launchUrl(url);
+      }
+    } catch (e) {
+      print('Error opening maps: $e');
     }
   }
 }

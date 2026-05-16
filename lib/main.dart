@@ -8,6 +8,9 @@ import 'services/wishlist_service.dart';
 import 'routes/app_routes.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/main_navigation_screen.dart';
+import 'screens/admin_dashboard_screen.dart';
+import 'screens/seller_dashboard_screen.dart';
+import 'screens/rider_dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,9 +92,20 @@ class _AppInitializerState extends State<_AppInitializer> {
             )
           : Consumer<AuthService>(
               builder: (context, authService, child) {
-                // If logged in, go directly to home
+                // If logged in, route based on user type
                 if (authService.isLoggedIn) {
-                  return const MainNavigationScreen();
+                  final userType = authService.currentUser?.userType ?? 'Buyer';
+                  
+                  switch (userType) {
+                    case 'Admin':
+                      return const AdminDashboardScreen();
+                    case 'Seller':
+                      return const SellerDashboardScreen();
+                    case 'Rider':
+                      return const RiderDashboardScreen();
+                    default: // Buyer
+                      return const MainNavigationScreen();
+                  }
                 }
                 // Otherwise show welcome screen
                 return const WelcomeScreen();
