@@ -6,6 +6,8 @@ import 'services/auth_service.dart';
 import 'services/cart_service.dart';
 import 'services/wishlist_service.dart';
 import 'routes/app_routes.dart';
+import 'screens/welcome_screen.dart';
+import 'screens/main_navigation_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,23 +40,28 @@ class _AppInitializer extends StatefulWidget {
 }
 
 class _AppInitializerState extends State<_AppInitializer> {
+  bool _isChecking = true;
+
   @override
   void initState() {
     super.initState();
-    // Check login status after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        final authService = Provider.of<AuthService>(context, listen: false);
-        await authService.checkLoginStatus();
-        
-        // Navigate to home if logged in
-        if (mounted && authService.isLoggedIn) {
-          Navigator.pushReplacementNamed(context, AppRoutes.home);
-        }
-      } catch (e) {
-        print('Error checking login: $e');
+    _checkLoginAndNavigate();
+  }
+
+  Future<void> _checkLoginAndNavigate() async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      await authService.checkLoginStatus();
+      
+      if (mounted) {
+        setState(() => _isChecking = false);
       }
-    });
+    } catch (e) {
+      print('Error checking login: $e');
+      if (mounted) {
+        setState(() => _isChecking = false);
+      }
+    }
   }
 
   @override
@@ -72,7 +79,24 @@ class _AppInitializerState extends State<_AppInitializer> {
         useMaterial3: true,
         fontFamily: 'Arial',
       ),
-      initialRoute: AppRoutes.welcome,
+      home: _isChecking
+          ? const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF7C3AED),
+                ),
+              ),
+            )
+          : Consumer<AuthService>(
+              builder: (context, authService, child) {
+                // If logged in, go directly to home
+                if (authService.isLoggedIn) {
+                  return const MainNavigationScreen();
+                }
+                // Otherwise show welcome screen
+                return const WelcomeScreen();
+              },
+            ),
       routes: AppRoutes.routes,
       onGenerateRoute: AppRoutes.onGenerateRoute,
     );

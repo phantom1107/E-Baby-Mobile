@@ -82,8 +82,6 @@ class _HomepageContentState extends State<HomepageContent> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
-
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -113,84 +111,135 @@ class _HomepageContentState extends State<HomepageContent> {
           ],
         ),
         actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.account_circle, color: Colors.white, size: 28),
-            onSelected: (value) {
-              switch (value) {
-                case 'profile':
-                  // Navigate to main navigation with profile tab (index 4)
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MainNavigationScreen(initialIndex: 4),
+          Consumer<AuthService>(
+            builder: (context, authService, child) {
+              final user = authService.currentUser;
+              final hasProfilePic = user?.profilePic != null && user!.profilePic!.isNotEmpty;
+              
+              return PopupMenuButton<String>(
+                icon: hasProfilePic
+                    ? CircleAvatar(
+                        radius: 16,
+                        backgroundImage: NetworkImage(user!.profilePic!),
+                        backgroundColor: Colors.white,
+                        onBackgroundImageError: (_, __) {},
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.account_circle,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'profile':
+                      // Navigate to main navigation with profile tab (index 4)
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MainNavigationScreen(initialIndex: 4),
+                        ),
+                        (route) => false,
+                      );
+                      break;
+                    case 'orders':
+                      // Navigate to main navigation with orders tab (index 3)
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MainNavigationScreen(initialIndex: 3),
+                        ),
+                        (route) => false,
+                      );
+                      break;
+                    case 'logout':
+                      authService.logout();
+                      Navigator.pushReplacementNamed(context, '/auth');
+                      break;
+                    case 'login':
+                      Navigator.pushNamed(context, '/auth');
+                      break;
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (authService.isLoggedIn) ...[
+                    PopupMenuItem(
+                      value: 'profile',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person, size: 20, color: Color(0xFF7C3AED)),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${user?.firstName ?? ''} ${user?.lastName ?? ''}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                user?.email ?? '',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    (route) => false,
-                  );
-                  break;
-                case 'orders':
-                  // Navigate to main navigation with orders tab (index 3)
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MainNavigationScreen(initialIndex: 3),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: 'orders',
+                      child: Row(
+                        children: [
+                          Icon(Icons.shopping_bag, size: 20, color: Color(0xFF7C3AED)),
+                          SizedBox(width: 12),
+                          Text('My Orders'),
+                        ],
+                      ),
                     ),
-                    (route) => false,
-                  );
-                  break;
-                case 'logout':
-                  authService.logout();
-                  break;
-                case 'login':
-                  Navigator.pushNamed(context, '/auth');
-                  break;
-              }
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          Icon(Icons.logout, color: Colors.red, size: 20),
+                          SizedBox(width: 12),
+                          Text('Logout', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    const PopupMenuItem(
+                      value: 'login',
+                      child: Row(
+                        children: [
+                          Icon(Icons.login, size: 20, color: Color(0xFF7C3AED)),
+                          SizedBox(width: 12),
+                          Text('Sign In'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              );
             },
-            itemBuilder: (context) => [
-              if (authService.isLoggedIn) ...[
-                const PopupMenuItem(
-                  value: 'profile',
-                  child: Row(
-                    children: [
-                      Icon(Icons.person, size: 20),
-                      SizedBox(width: 8),
-                      Text('Profile'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'orders',
-                  child: Row(
-                    children: [
-                      Icon(Icons.shopping_bag, size: 20),
-                      SizedBox(width: 8),
-                      Text('Orders'),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, color: Colors.red, size: 20),
-                      SizedBox(width: 8),
-                      Text('Logout', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ] else ...[
-                const PopupMenuItem(
-                  value: 'login',
-                  child: Row(
-                    children: [
-                      Icon(Icons.login, size: 20),
-                      SizedBox(width: 8),
-                      Text('Login'),
-                    ],
-                  ),
-                ),
-              ],
-            ],
           ),
         ],
       ),

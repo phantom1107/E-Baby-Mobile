@@ -224,15 +224,8 @@ class ProductCard extends StatelessWidget {
   }
 
   void _viewProductDetails(BuildContext context) {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    
-    // Check if user is logged in
-    if (!authService.isLoggedIn) {
-      _showGuestModal(context, isViewingProduct: true);
-      return;
-    }
-    
-    // Navigate to product details
+    // Allow both guests and logged-in users to view product details
+    // No login required for viewing
     Navigator.pushNamed(
       context,
       '/product_details',
@@ -337,7 +330,7 @@ class ProductCard extends StatelessWidget {
     }
   }
 
-  void _showGuestModal(BuildContext context, {bool isViewingProduct = false}) {
+  void _showGuestModal(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -347,7 +340,7 @@ class ProductCard extends StatelessWidget {
           ),
           title: Row(
             children: [
-              Icon(Icons.info_outline, color: const Color(0xFF7C3AED)),
+              Icon(Icons.login, color: const Color(0xFF7C3AED)),
               const SizedBox(width: 8),
               const Text('Sign In Required'),
             ],
@@ -356,32 +349,45 @@ class ProductCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                isViewingProduct
-                    ? 'You need to sign in to view product details.'
-                    : 'You need to sign in to add items to your cart or wishlist.',
-                style: const TextStyle(fontSize: 14),
+              const Text(
+                'You need to sign in to add items to your cart or wishlist.',
+                style: TextStyle(fontSize: 15),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Member Benefits:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7C3AED).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Member Benefits:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF7C3AED),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildBenefit('Save items to cart & wishlist'),
+                    _buildBenefit('Track your orders'),
+                    _buildBenefit('Faster checkout'),
+                    _buildBenefit('Exclusive member deals'),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              _buildBenefit('View detailed product information'),
-              _buildBenefit('Save items to wishlist'),
-              _buildBenefit('Manage your cart'),
-              _buildBenefit('Track your orders'),
-              _buildBenefit('Exclusive member deals'),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Continue as Guest'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[600],
+              ),
+              child: const Text('Maybe Later'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -391,6 +397,10 @@ class ProductCard extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF7C3AED),
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text('Sign In'),
             ),

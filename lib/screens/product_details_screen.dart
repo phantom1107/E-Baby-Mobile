@@ -211,16 +211,54 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.info_outline, color: Color(0xFF7C3AED)),
+            Icon(Icons.login, color: Color(0xFF7C3AED)),
             SizedBox(width: 8),
             Text('Sign In Required'),
           ],
         ),
-        content: const Text('Please sign in to continue shopping.'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'You need to sign in to add items to your cart or wishlist.',
+              style: TextStyle(fontSize: 15),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF7C3AED).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Member Benefits:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Color(0xFF7C3AED),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text('• Save items to cart & wishlist', style: TextStyle(fontSize: 13)),
+                  Text('• Track your orders', style: TextStyle(fontSize: 13)),
+                  Text('• Faster checkout', style: TextStyle(fontSize: 13)),
+                  Text('• Exclusive member deals', style: TextStyle(fontSize: 13)),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[600],
+            ),
+            child: const Text('Maybe Later'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -230,6 +268,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF7C3AED),
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: const Text('Sign In'),
           ),
