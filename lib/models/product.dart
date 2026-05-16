@@ -93,7 +93,7 @@ class Product {
       price: double.tryParse(data['price'].toString()) ?? 0.0,
       image: mainImage,
       images: imagesList,
-      sales: data['sales'] ?? 0,
+      sales: data['total_sales'] ?? data['sales'] ?? 0,
       stock: data['stock'] ?? 0,
       sellerEmail: data['seller_email'] ?? '',
       sellerFirstName: data['first_name'],

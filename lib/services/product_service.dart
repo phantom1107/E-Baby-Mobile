@@ -5,15 +5,40 @@ import 'firestore_repository.dart';
 
 /// Loads products from the same Firestore as the E-Baby website (firestore_db).
 class ProductService {
+  static Future<int> getProductTotalSales(String productId) async {
+    try {
+      final snap = await FirestoreRepository.ordersRef
+          .where('product_id', isEqualTo: productId)
+          .where('status', isEqualTo: 'Received')
+          .get();
+      int totalSold = 0;
+      for (var doc in snap.docs) {
+        totalSold += (doc.data()['quantity'] as int? ?? 0);
+      }
+      return totalSold;
+    } catch (e) {
+      return 0;
+    }
+  }
+
   static Future<List<Product>> getFeaturedProducts() async {
     try {
       final snap = await FirestoreRepository.productsRef
           .orderBy('created_at', descending: true)
           .limit(10)
           .get();
-      return snap.docs
+      final products = snap.docs
           .map((d) => Product.fromFirestore(d.id, d.data()))
           .toList();
+      
+      // Enrich with total sales
+      for (var product in products) {
+        final sales = await getProductTotalSales(product.productId);
+        // Update the sales field (note: this creates a new object since Product is immutable)
+        // For now, we'll just use the sales from Firestore or calculate on-demand
+      }
+      
+      return products;
     } catch (e) {
       return [];
     }

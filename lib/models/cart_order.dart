@@ -15,6 +15,7 @@ class CartItem {
   final String size;
   final String email;
   final String sellerEmail;
+  final String sellerName;
 
   CartItem({
     required this.id,
@@ -29,6 +30,7 @@ class CartItem {
     required this.size,
     required this.email,
     required this.sellerEmail,
+    this.sellerName = 'Unknown Seller',
   });
 
   String get cartDocId => docId ?? id.toString();
@@ -48,6 +50,7 @@ class CartItem {
       size: json['size'] ?? '',
       email: json['email'] ?? '',
       sellerEmail: json['seller_email'] ?? '',
+      sellerName: json['seller_name'] ?? 'Unknown Seller',
     );
   }
 
@@ -65,6 +68,7 @@ class CartItem {
       size: data['size'] ?? '',
       email: data['email'] ?? '',
       sellerEmail: data['seller_email'] ?? '',
+      sellerName: data['seller_name'] ?? 'Unknown Seller',
     );
   }
 
@@ -80,6 +84,7 @@ class CartItem {
       'size': size,
       'email': email,
       'seller_email': sellerEmail,
+      'seller_name': sellerName,
     };
   }
 

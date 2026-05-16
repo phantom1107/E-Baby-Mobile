@@ -151,22 +151,45 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                // Stock indicator
+                // Stock and Sales indicators
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(
-                      Icons.inventory_2,
-                      size: 12,
-                      color: product.stock > 0 ? const Color(0xFF10B981) : Colors.red,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.inventory_2,
+                          size: 12,
+                          color: product.stock > 0 ? const Color(0xFF10B981) : Colors.red,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Stock: ${product.stock}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: product.stock > 0 ? const Color(0xFF10B981) : Colors.red,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      product.stock > 0 ? 'Total Stock: ${product.stock}' : 'Out of Stock',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: product.stock > 0 ? const Color(0xFF10B981) : Colors.red,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.shopping_cart,
+                          size: 12,
+                          color: Color(0xFF7C3AED),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${product.sales} sold',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF7C3AED),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

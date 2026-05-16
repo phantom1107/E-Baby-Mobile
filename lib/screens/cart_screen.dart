@@ -331,6 +331,24 @@ class _CartScreenState extends State<CartScreen> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.store, size: 12, color: Colors.grey[600]),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              item.sellerName,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 6),
                       if (item.color.isNotEmpty || item.size.isNotEmpty)
                         Container(
