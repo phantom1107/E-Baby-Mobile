@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
+import '../utils/image_utils.dart';
 
 class RiderPastDeliveriesScreen extends StatelessWidget {
   const RiderPastDeliveriesScreen({super.key});
@@ -97,14 +98,10 @@ class RiderPastDeliveriesScreen extends StatelessWidget {
   ) {
     final productName = data['name'] ?? 'Unknown Product';
     final quantity = data['quantity'] ?? 1;
-    String imageUrl = data['image'] ?? '';
-    
-    // Fix Cloudinary URL format
-    if (imageUrl.isNotEmpty && imageUrl.startsWith('//')) {
-      imageUrl = 'https:$imageUrl';
-    } else if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-      imageUrl = 'https://$imageUrl';
-    }
+    final imageUrl = ImageUtils.normalizeImageUrl(
+      data['image'],
+      fallback: ImageUtils.productPlaceholder,
+    );
     
     final customerEmail = data['email'] ?? '';
     final deliveryAddress = data['delivery_address'] ?? 'No address';
@@ -297,12 +294,7 @@ class RiderPastDeliveriesScreen extends StatelessWidget {
   }
 
   void _viewDeliveryPhoto(BuildContext context, String photoUrl) {
-    String cleanPhotoUrl = photoUrl;
-    if (cleanPhotoUrl.startsWith('//')) {
-      cleanPhotoUrl = 'https:$cleanPhotoUrl';
-    } else if (!cleanPhotoUrl.startsWith('http')) {
-      cleanPhotoUrl = 'https://$cleanPhotoUrl';
-    }
+    final cleanPhotoUrl = ImageUtils.normalizeImageUrl(photoUrl);
 
     showDialog(
       context: context,

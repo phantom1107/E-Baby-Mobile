@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/cloudinary_service.dart';
+import '../utils/image_utils.dart';
 
 class RiderMyDeliveriesScreen extends StatelessWidget {
   const RiderMyDeliveriesScreen({super.key});
@@ -102,14 +103,10 @@ class RiderMyDeliveriesScreen extends StatelessWidget {
     final productName = data['name'] ?? 'Unknown Product';
     final quantity = data['quantity'] ?? 1;
     final totalPrice = (data['total_price'] ?? 0).toDouble();
-    String imageUrl = data['image'] ?? '';
-    
-    // Fix Cloudinary URL format
-    if (imageUrl.isNotEmpty && imageUrl.startsWith('//')) {
-      imageUrl = 'https:$imageUrl';
-    } else if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-      imageUrl = 'https://$imageUrl';
-    }
+    final imageUrl = ImageUtils.normalizeImageUrl(
+      data['image'],
+      fallback: ImageUtils.productPlaceholder,
+    );
     
     final customerEmail = data['email'] ?? '';
     final deliveryAddress = data['delivery_address'] ?? 'No address';
