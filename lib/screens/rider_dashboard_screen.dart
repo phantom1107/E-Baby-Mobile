@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 import 'rider_available_orders_screen.dart';
 import 'rider_my_deliveries_screen.dart';
+import 'rider_past_deliveries_screen.dart';
 import 'rider_delivery_photos_screen.dart';
 import 'rider_earnings_screen.dart';
 
@@ -22,6 +23,7 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen> {
     {'icon': Icons.dashboard, 'title': 'Dashboard'},
     {'icon': Icons.delivery_dining, 'title': 'Available Orders'},
     {'icon': Icons.local_shipping, 'title': 'My Deliveries'},
+    {'icon': Icons.history, 'title': 'Past Deliveries'},
     {'icon': Icons.camera_alt, 'title': 'Delivery Photos'},
     {'icon': Icons.money, 'title': 'Earnings'},
   ];
@@ -258,8 +260,10 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen> {
       case 2:
         return const RiderMyDeliveriesScreen();
       case 3:
-        return const RiderDeliveryPhotosScreen();
+        return const RiderPastDeliveriesScreen();
       case 4:
+        return const RiderDeliveryPhotosScreen();
+      case 5:
         return const RiderEarningsScreen();
       default:
         return const Center(child: Text('Coming Soon'));

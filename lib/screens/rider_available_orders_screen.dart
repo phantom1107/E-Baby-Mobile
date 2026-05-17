@@ -618,16 +618,142 @@ class RiderAvailableOrdersScreen extends StatelessWidget {
 
             if (context.mounted) {
               Navigator.pop(context); // Close loading
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    distanceInKm > 0 
-                      ? 'Order accepted! Distance: ${distanceInKm.toStringAsFixed(2)} km'
-                      : 'Order accepted!'
+              
+              // Show detailed earnings breakdown
+              await showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  title: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 28),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text('Order Accepted!', style: TextStyle(fontSize: 20)),
+                      ),
+                    ],
                   ),
-                  backgroundColor: const Color(0xFF10B981),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF10B981).withOpacity(0.1),
+                                const Color(0xFF10B981).withOpacity(0.05),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Your Earnings Breakdown',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1F2937),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildEarningsRow('Base Shipping Fee', shippingFee),
+                              if (distanceInKm > 0) ...[
+                                const SizedBox(height: 8),
+                                _buildEarningsRow(
+                                  'Distance Fee (${distanceInKm.toStringAsFixed(2)} km)',
+                                  distanceCommission,
+                                  subtitle: '₱10 per 3km',
+                                ),
+                              ],
+                              const Divider(height: 24, thickness: 2),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Total Earnings',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                  Text(
+                                    '₱${totalEarnings.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF10B981),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B82F6).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline, color: Color(0xFF3B82F6), size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Start delivery now! You\'ll receive payment after marking as delivered.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text('Start Delivery'),
+                    ),
+                  ],
                 ),
               );
+              
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      distanceInKm > 0 
+                        ? 'Order accepted! Distance: ${distanceInKm.toStringAsFixed(2)} km'
+                        : 'Order accepted!'
+                    ),
+                    backgroundColor: const Color(0xFF10B981),
+                  ),
+                );
+              }
             }
           } catch (e) {
             if (context.mounted) {
@@ -655,6 +781,48 @@ class RiderAvailableOrdersScreen extends StatelessWidget {
         );
       }
     }
+  }
+
+  Widget _buildEarningsRow(String label, double amount, {String? subtitle}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Text(
+              '₱${amount.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+          ],
+        ),
+        if (subtitle != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[500],
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   void _viewOrderDetails(BuildContext context, String orderId, Map<String, dynamic> data) {
